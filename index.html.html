@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Atenuación de Señal - Perímetro Penitenciario</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f2f3f5;
+    color: #222;
+  }
+  .wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 16px 50px;
+  }
+
+  .top {
+    background: #2c5f8a;
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+  }
+  .top h1 {
+    margin: 0 0 6px;
+    font-size: 21px;
+  }
+  .top p {
+    margin: 0;
+    font-size: 13px;
+    color: #d6e4ef;
+  }
+
+  .box {
+    background: #fff;
+    border: 1px solid #d7dade;
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .box h2 {
+    font-size: 15px;
+    margin: 0 0 14px;
+    color: #2c5f8a;
+    border-bottom: 2px solid #e5e9ec;
+    padding-bottom: 8px;
+  }
+
+  .controles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 680px) { .controles { grid-template-columns: 1fr; } }
+
+  .campo { margin-bottom: 14px; }
+  .campo label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+  }
+  .campo .valor { font-weight: normal; color: #2c5f8a; }
+
+  select {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid #b9bec4;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+  }
+  input[type=range] { width: 100%; }
+
+  .diagrama-caja {
+    text-align: center;
+  }
+  svg { max-width: 100%; height: auto; }
+
+  .resultado {
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 2px solid #ccc;
+    text-align: center;
+  }
+  .resultado.bloqueada { background: #eaf6ec; border-color: #66b57a; }
+  .resultado.abierta { background: #fdeeee; border-color: #d97a7a; }
+  .resultado .titulo { font-size: 17px; font-weight: bold; margin-bottom: 4px; }
+  .resultado.bloqueada .titulo { color: #256d3a; }
+  .resultado.abierta .titulo { color: #a33; }
+  .resultado .num { font-size: 24px; font-weight: bold; margin: 6px 0 4px; }
+  .resultado .desc { font-size: 12.5px; color: #555; }
+
+  table.tabla-resultados {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  table.tabla-resultados th, table.tabla-resultados td {
+    border: 1px solid #d7dade;
+    padding: 8px 10px;
+    text-align: left;
+  }
+  table.tabla-resultados th {
+    background: #eef2f5;
+    width: 40%;
+  }
+
+  .barra-fila { margin-bottom: 10px; }
+  .barra-fila .etiqueta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: #444;
+    margin-bottom: 3px;
+  }
+  .barra-track {
+    height: 14px;
+    background: #eceef0;
+    border-radius: 3px;
+    border: 1px solid #d7dade;
+    overflow: hidden;
+  }
+  .barra-fill { height: 100%; }
+
+  .nota {
+    font-size: 11.5px;
+    color: #777;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  footer {
+    font-size: 11.5px;
+    color: #888;
+    margin-top: 10px;
+    line-height: 1.7;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1>Simulador de atenuación pasiva de señal - Perímetro penitenciario</h1>
+    <p>Telecomunicaciones 22026-1900-046-A · Ingeniería en Sistemas, UMG Zona 2 · Erick Garcia</p>
+  </div>
+
+  <div class="box">
+    <h2>1. Parámetros</h2>
+    <div class="controles">
+      <div>
+        <div class="campo">
+          <label>Tecnología / Frecuencia: <span class="valor" id="valTech"></span></label>
+          <select id="tech">
+            <option value="0">2G - 850 MHz</option>
+            <option value="1">3G - 1900 MHz</option>
+            <option value="2" selected>4G - 2100 MHz</option>
+            <option value="3">5G Sub-6 - 3.5 GHz</option>
+            <option value="4">5G mmWave - 28 GHz</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Material del muro perimetral:</label>
+          <select id="material">
+            <option value="0">Sin blindaje (control)</option>
+            <option value="1" selected>Concreto reforzado</option>
+            <option value="2">Ladrillo</option>
+            <option value="3">Malla de acero (jaula de Faraday)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="campo">
+          <label>Espesor de muro: <span class="valor" id="valThick">0.30 m</span></label>
+          <input type="range" id="thickness" min="0.05" max="1.0" step="0.01" value="0.30">
+        </div>
+        <div class="campo">
+          <label>Distancia a la torre más cercana: <span class="valor" id="valDist">300 m</span></label>
+          <input type="range" id="distance" min="50" max="2000" step="10" value="300">
+        </div>
+        <div class="campo">
+          <label>EIRP de la torre: <span class="valor" id="valEirp">43 dBm</span></label>
+          <input type="range" id="eirp" min="30" max="50" step="1" value="43">
+        </div>
+      </div>
+    </div>
+    <p class="nota">El umbral usado es -95 dBm, que es la sensibilidad mínima típica para sostener llamada o datos en redes celulares comerciales.</p>
+  </div>
+
+  <div class="box">
+    <h2>2. Corte transversal del perímetro</h2>
+    <div class="diagrama-caja">
+      <svg id="diagram" viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="resultado" id="verdictBox">
+      <div class="titulo" id="verdictTitle">-</div>
+      <div class="num" id="verdictNum">- dBm</div>
+      <div class="desc" id="verdictSub">-</div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>3. Balance de potencia</h2>
+    <table class="tabla-resultados">
+      <tr><th>Pérdida FSPL (espacio libre)</th><td id="numFspl">-</td></tr>
+      <tr><th>Pérdida por material</th><td id="numMat">-</td></tr>
+      <tr><th>Potencia recibida</th><td id="numRx">-</td></tr>
+    </table>
+
+    <div style="margin-top:14px;">
+      <div class="barra-fila">
+        <div class="etiqueta"><span>FSPL</span><span id="barFsplLabel">-</span></div>
+        <div class="barra-track"><div class="barra-fill" id="barFspl" style="background:#8ea4b5;"></div></div>
+      </div>
+      <div class="barra-fila">
+        <div class="etiqueta"><span>Absorción del material</span><span id="barMatLabel">-</span></div>
+        <div class="barra-track"><div class="barra-fill" id="barMat" style="background:#2c5f8a;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    FSPL(dB) = 20·log10(d_km) + 20·log10(f_MHz) + 32.44 &nbsp;|&nbsp; Pérdida material (dB) = coeficiente x espesor(m)<br>
+    Coeficientes aproximados a partir de literatura de propagación en materiales de construcción (referencia general ITU-R P.2040).<br>
+    Proyecto de control pasivo - no emite ninguna señal de interferencia.
+  </footer>
+
+</div>
+
+<script>
+  const TECHS = [
+    {freqMHz:850,  label:"850 MHz"},
+    {freqMHz:1900, label:"1900 MHz"},
+    {freqMHz:2100, label:"2100 MHz"},
+    {freqMHz:3500, label:"3.5 GHz"},
+    {freqMHz:28000, label:"28 GHz"},
+  ];
+
+  // [sin blindaje, concreto reforzado, ladrillo, malla de acero]
+  const ALPHA = [
+    [0.5, 0.8, 1.0, 1.4, 3.0],
+    [35,  48,  55,  70,  260],
+    [14,  20,  24,  32,  140],
+    [85,  90,  95,  105, 220],
+  ];
+
+  const MAT_NAMES = ["Sin blindaje (control)", "Concreto reforzado", "Ladrillo", "Malla de acero (jaula de Faraday)"];
+  const THRESHOLD = -95;
+
+  const el = {
+    tech: document.getElementById('tech'),
+    material: document.getElementById('material'),
+    thickness: document.getElementById('thickness'),
+    distance: document.getElementById('distance'),
+    eirp: document.getElementById('eirp'),
+    valTech: document.getElementById('valTech'),
+    valThick: document.getElementById('valThick'),
+    valDist: document.getElementById('valDist'),
+    valEirp: document.getElementById('valEirp'),
+    numFspl: document.getElementById('numFspl'),
+    numMat: document.getElementById('numMat'),
+    numRx: document.getElementById('numRx'),
+    barFspl: document.getElementById('barFspl'),
+    barMat: document.getElementById('barMat'),
+    barFsplLabel: document.getElementById('barFsplLabel'),
+    barMatLabel: document.getElementById('barMatLabel'),
+    verdictBox: document.getElementById('verdictBox'),
+    verdictTitle: document.getElementById('verdictTitle'),
+    verdictSub: document.getElementById('verdictSub'),
+    verdictNum: document.getElementById('verdictNum'),
+    diagram: document.getElementById('diagram'),
+  };
+
+  function fspl(distKm, freqMHz){
+    return 20*Math.log10(distKm) + 20*Math.log10(freqMHz) + 32.44;
+  }
+
+  function drawDiagram(blocked, thicknessM){
+    const towerX = 80, wallX = 430, wallW = 25 + Math.round(thicknessM*120);
+    const cellX = wallX + wallW + 60;
+
+    let svg = "";
+    svg += `<line x1="20" y1="190" x2="780" y2="190" stroke="#c7ccd1" stroke-width="1"/>`;
+
+    // torre
+    svg += `<line x1="${towerX}" y1="160" x2="${towerX}" y2="40" stroke="#555" stroke-width="3"/>`;
+    svg += `<path d="M ${towerX-20} 58 L ${towerX} 40 L ${towerX+20} 58" fill="none" stroke="#555" stroke-width="2"/>`;
+    svg += `<path d="M ${towerX-13} 76 L ${towerX} 62 L ${towerX+13} 76" fill="none" stroke="#555" stroke-width="2"/>`;
+    svg += `<text x="${towerX}" y="178" fill="#555" font-family="Arial" font-size="11" text-anchor="middle">Torre</text>`;
+
+    // onda afuera
+    let path1 = "M "+ towerX +" 115 ";
+    for(let x=towerX; x<=wallX; x+=6){
+      const y = 115 + 20*Math.sin((x-towerX)/17);
+      path1 += `L ${x} ${y} `;
+    }
+    svg += `<path d="${path1}" fill="none" stroke="#2c5f8a" stroke-width="2"/>`;
+
+    // muro
+    svg += `<rect x="${wallX}" y="60" width="${wallW}" height="130" fill="#e4e8eb" stroke="#9aa2a9" stroke-width="1.5"/>`;
+    for(let i=0;i<wallW; i+=9){
+      svg += `<line x1="${wallX+i}" y1="60" x2="${wallX+i}" y2="190" stroke="#c7ccd1" stroke-width="1"/>`;
+    }
+    svg += `<text x="${wallX+wallW/2}" y="205" fill="#555" font-family="Arial" font-size="10.5" text-anchor="middle">Muro perimetral</text>`;
+
+    // onda adentro
+    const insideStart = wallX+wallW;
+    const amp2 = blocked ? 2.5 : 11;
+    const colorIn = blocked ? "#aab0b6" : "#2c5f8a";
+    const dashIn = blocked ? "2 5" : "0";
+    let path2 = "M "+ insideStart +" 115 ";
+    for(let x=insideStart; x<=cellX+130; x+=6){
+      const decay = Math.max(0, 1-((x-insideStart)/200));
+      const y = 115 + amp2*decay*Math.sin((x-insideStart)/15);
+      path2 += `L ${x} ${y} `;
+    }
+    svg += `<path d="${path2}" fill="none" stroke="${colorIn}" stroke-width="2" stroke-dasharray="${dashIn}"/>`;
+
+    // celda
+    svg += `<rect x="${cellX}" y="90" width="130" height="80" fill="none" stroke="#9aa2a9" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    svg += `<text x="${cellX+65}" y="205" fill="#555" font-family="Arial" font-size="10.5" text-anchor="middle">Interior de celda</text>`;
+    svg += `<circle cx="${cellX+65}" cy="130" r="4" fill="${blocked ? '#8ea08e' : '#c15c5c'}"/>`;
+    svg += `<text x="${cellX+65}" y="150" fill="${blocked ? '#256d3a' : '#a33'}" font-family="Arial" font-size="11" text-anchor="middle" font-weight="bold">${blocked ? 'Sin señal útil' : 'Señal presente'}</text>`;
+
+    el.diagram.innerHTML = svg;
+  }
+
+  function update(){
+    const techIdx = parseInt(el.tech.value, 10);
+    const matIdx = parseInt(el.material.value, 10);
+    const thicknessM = parseFloat(el.thickness.value);
+    const distM = parseFloat(el.distance.value);
+    const eirp = parseFloat(el.eirp.value);
+
+    const tech = TECHS[techIdx];
+    const distKm = distM/1000;
+
+    const fsplDb = fspl(distKm, tech.freqMHz);
+    const alpha = ALPHA[matIdx][techIdx];
+    const matDb = alpha * thicknessM;
+    const rx = eirp - fsplDb - matDb;
+    const blocked = rx < THRESHOLD;
+
+    el.valTech.textContent = tech.label;
+    el.valThick.textContent = thicknessM.toFixed(2) + " m";
+    el.valDist.textContent = Math.round(distM) + " m";
+    el.valEirp.textContent = eirp + " dBm";
+
+    el.numFspl.textContent = fsplDb.toFixed(1) + " dB";
+    el.numMat.textContent = matDb.toFixed(1) + " dB";
+    el.numRx.textContent = rx.toFixed(1) + " dBm";
+
+    const maxBar = 140;
+    el.barFspl.style.width = Math.min(100, (fsplDb/maxBar)*100) + "%";
+    el.barMat.style.width = Math.min(100, (matDb/maxBar)*100) + "%";
+    el.barFsplLabel.textContent = fsplDb.toFixed(1) + " dB";
+    el.barMatLabel.textContent = matDb.toFixed(1) + " dB (" + MAT_NAMES[matIdx] + ")";
+
+    el.verdictNum.textContent = rx.toFixed(1) + " dBm";
+    if(blocked){
+      el.verdictBox.className = "resultado bloqueada";
+      el.verdictTitle.textContent = "Comunicación no sostenible";
+      el.verdictSub.textContent = "La potencia recibida está por debajo del umbral de -95 dBm. El blindaje confina la señal dentro del perímetro.";
+    } else {
+      el.verdictBox.className = "resultado abierta";
+      el.verdictTitle.textContent = "Señal aún utilizable";
+      el.verdictSub.textContent = "La potencia sigue por encima del umbral. Hace falta más espesor o un material con mejor coeficiente de absorción.";
+    }
+
+    drawDiagram(blocked, thicknessM);
+  }
+
+  [el.tech, el.material, el.thickness, el.distance, el.eirp].forEach(input=>{
+    input.addEventListener('input', update);
+  });
+
+  update();
+</script>
+</body>
+</html>
